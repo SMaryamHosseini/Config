@@ -1,7 +1,7 @@
 import requests
 import re
 
-SUB_URL = "https://raw.githubusercontent.com/barry-far/V2ray-config/main/Splitted-By-Protocol/vless.txt"
+SUB_URL = "https://raw.githubusercontent.com/barry-far/V2ray-config/main/All_Configs_base64_Sub.txt"
 
 # CDN IP list (همونایی که دادی)
 CDN_IPS = [
