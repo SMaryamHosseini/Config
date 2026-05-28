@@ -15,19 +15,21 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Setup Python
       uses: actions/setup-python@v5
       with:
         python-version: "3.11"
 
-    - name: Install dependencies
+    - name: Install
       run: pip install requests
 
-    - name: Run filter script
+    - name: Run script
       run: python filter.py
 
-    - name: Commit and push (force sync)
+    - name: Commit + Force Sync
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "github-actions"
@@ -36,6 +38,12 @@ jobs:
 
         git commit -m "auto update" || echo "no changes"
 
-        git pull --rebase origin main || echo "no remote changes"
+        git fetch origin main
+
+        git reset --hard origin/main || true
+
+        git add mci.txt
+
+        git commit -m "auto update nodes" || echo "no changes"
 
         git push --force origin main
