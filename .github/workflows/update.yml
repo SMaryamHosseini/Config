@@ -1,9 +1,7 @@
-```yaml
 name: update
 
 on:
   workflow_dispatch:
-
   schedule:
     - cron: "*/30 * * * *"
 
@@ -15,7 +13,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
     - name: Checkout
       uses: actions/checkout@v4
 
@@ -24,20 +21,21 @@ jobs:
       with:
         python-version: "3.11"
 
-    - name: Install
+    - name: Install dependencies
       run: pip install requests
 
-    - name: Run Filter
+    - name: Run filter script
       run: python filter.py
 
-    - name: Commit Files
+    - name: Commit and push (force sync)
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "github-actions"
 
         git add .
 
-        git diff --cached --quiet || git commit -m "auto update"
+        git commit -m "auto update" || echo "no changes"
 
-        git push
-```
+        git pull --rebase origin main || echo "no remote changes"
+
+        git push --force origin main
