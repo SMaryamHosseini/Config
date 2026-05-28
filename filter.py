@@ -1,5 +1,7 @@
 import requests
 import re
+import ipaddress
+
 
 SUB_URL = "https://raw.githubusercontent.com/barry-far/V2ray-config/main/All_Configs_base64_Sub.txt"
 
@@ -13,42 +15,53 @@ CDN_IPS = [
 "23.209.239.170","2.22.2.3","23.222.49.45","23.61.234.146","23.197.148.242"
 ]
 
-def extract_ips(text):
-    return re.findall(r"@?([\w\.-]+):\d+|(\d+\.\d+\.\d+\.\d+)", text)
+# تبدیل به رنج /16
+CDN_RANGES = set()
 
-def ping_check(ip):
-    # ساده‌ترین تست (DNS resolve + socket simulation سبک)
+for ip in CDN_IPS:
+    parts = ip.split(".")
+    CDN_RANGES.add(f"{parts[0]}.{parts[1]}")
+
+# استخراج IP از کانفیگ
+def extract_ip(line):
+    m = re.search(r'@([\d\.]+):', line)
+    if m:
+        return m.group(1)
+    return None
+
+good_configs = []
+
+for sub in SUB_LINKS:
     try:
-        r = requests.get(f"http://{ip}", timeout=2)
-        return True
-    except:
-        return False
+        text = requests.get(sub, timeout=20).text
 
-def main():
-    data = requests.get(SUB_URL).text
+        for line in text.splitlines():
 
-    nodes = extract_ips(data)
-    good = []
+            if not line.startswith("vless://"):
+                continue
 
-    for n in nodes:
-        ip = n[1] if n[1] else n[0]
-        if not ip:
-            continue
+            ip = extract_ip(line)
 
-        if ip in CDN_IPS:
-            good.append(ip)
+            if not ip:
+                continue
 
-    print("TOTAL:", len(nodes))
-    print("GOOD:", len(good))
+            parts = ip.split(".")
+            prefix = f"{parts[0]}.{parts[1]}"
 
-    # خیلی مهم: خروجی واقعی
-    with open("mci_best.txt", "w") as f:
-        for ip in good:
-            f.write(ip + "\n")
+            if prefix in CDN_RANGES:
+                good_configs.append(line)
 
-    with open("sub.txt", "w") as f:
-        for ip in good:
-            f.write(f"vless://{ip}\n")
+    except Exception as e:
+        print("ERR:", e)
 
-if __name__ == "__main__":
-    main()
+# حذف تکراری
+good_configs = list(set(good_configs))
+
+# ذخیره خروجی
+with open("mci_best.txt", "w", encoding="utf-8") as f:
+    for g in good_configs:
+        f.write(g + "\n")
+
+print("FOUND:", len(good_configs))
+print("DONE")
+```
