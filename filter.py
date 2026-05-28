@@ -1,47 +1,79 @@
 import requests
 import socket
+import ssl
 import base64
+from urllib.parse import urlparse
 
-allowed = open("allowed_ranges.txt").read().splitlines()
-subs = open("subs.txt").read().splitlines()
+subs = open("subs.txt","r",encoding="utf-8").read().splitlines()
 
-good = []
+nodes = []
 
-for sub in subs:
-
+# -------------------------
+# 1. extract nodes
+# -------------------------
+for url in subs:
     try:
-        r = requests.get(sub, timeout=20)
-
-        data = r.text.strip()
+        r = requests.get(url, timeout=15)
+        text = r.text.strip()
 
         try:
-            decoded = base64.b64decode(data + "===").decode(errors="ignore")
+            decoded = base64.b64decode(text + "==").decode(errors="ignore")
         except:
-            continue
+            decoded = text
 
         for line in decoded.splitlines():
-
-            if not line.startswith("vless://"):
-                continue
-
-            try:
-                host = line.split("@")[1].split(":")[0]
-
-                ip = socket.gethostbyname(host)
-
-                if any(ip.startswith(x) for x in allowed):
-                    good.append(line)
-
-            except:
-                pass
+            if "vless://" in line or "vmess://" in line or "trojan://" in line:
+                nodes.append(line)
 
     except:
         pass
 
-output = "\n".join(good)
+print("TOTAL NODES:", len(nodes))
 
-encoded = base64.b64encode(output.encode()).decode()
 
-open("mci.txt","w").write(encoded)
+# -------------------------
+# 2. TLS test (REAL CHECK)
+# -------------------------
+def test_node(host, port):
+    try:
+        ctx = ssl.create_default_context()
+        sock = socket.create_connection((host, port), timeout=3)
+        ssock = ctx.wrap_socket(sock, server_hostname=host)
 
-print("saved", len(good))
+        ssock.settimeout(3)
+        ssock.close()
+
+        return True
+    except:
+        return False
+
+
+# -------------------------
+# 3. parse + test
+# -------------------------
+good = []
+
+for i, n in enumerate(nodes):
+    try:
+        if "@" not in n:
+            continue
+
+        hp = n.split("@")[1]
+        host = hp.split(":")[0]
+        port = int(hp.split(":")[1].split("?")[0])
+
+        if test_node(host, port):
+            good.append(n)
+
+        print(i, "tested")
+
+    except:
+        pass
+
+
+# -------------------------
+# 4. output
+# -------------------------
+open("mci_best.txt","w",encoding="utf-8").write("\n".join(good))
+
+print("GOOD:", len(good))
