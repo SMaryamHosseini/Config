@@ -65,4 +65,3 @@ with open("sub.txt", "w", encoding="utf-8") as f:
 
 print("FOUND:", len(good))
 print("DONE")
-```
