@@ -16,9 +16,12 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install requests
+        run: pip install requests
+
       - name: Run finder
         run: |
-          python finder.py
+          python filter.py
 
       - name: Commit results
         run: |
