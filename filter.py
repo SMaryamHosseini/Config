@@ -1,51 +1,66 @@
 import requests
 import base64
 import re
+import socket
+from concurrent.futures import ThreadPoolExecutor
 
 SUB_LINKS = [
     "https://raw.githubusercontent.com/barry-far/V2ray-config/main/All_Configs_base64_Sub.txt"
 ]
 
-CDN_PREFIXES = [
-    "23.", "2.", "184.", "104.", "172.", "96.", "69.", "95."
-]
+# timeout خیلی مهمه (برای MCI باید کم باشه)
+TIMEOUT = 1.5
+
+PORT = 443
 
 good = []
 
-def extract_ip(line):
-    m = re.search(r'@([\d\.]+):', line)
+def decode_sub(text):
+    try:
+        return base64.b64decode(text).decode("utf-8", errors="ignore")
+    except:
+        return text
+
+def extract_ip(vless_line):
+    m = re.search(r'@([\d\.]+):', vless_line)
     return m.group(1) if m else None
+
+def tcp_check(ip):
+    try:
+        s = socket.socket()
+        s.settimeout(TIMEOUT)
+        s.connect((ip, PORT))
+        s.close()
+        return True
+    except:
+        return False
+
+def process_line(line):
+    if "vless://" not in line:
+        return None
+
+    ip = extract_ip(line)
+    if not ip:
+        return None
+
+    if tcp_check(ip):
+        return line
+
+    return None
 
 for sub in SUB_LINKS:
     print("FETCH:", sub)
 
-    try:
-        raw = requests.get(sub, timeout=20).text
+    raw = requests.get(sub, timeout=20).text
+    decoded = decode_sub(raw)
 
-        # base64 decode
-        try:
-            decoded = base64.b64decode(raw).decode("utf-8", errors="ignore")
-        except:
-            decoded = raw
+    lines = decoded.splitlines()
+    print("TOTAL:", len(lines))
 
-        lines = decoded.splitlines()
-        print("LINES:", len(lines))
+    with ThreadPoolExecutor(max_workers=50) as ex:
+        results = list(ex.map(process_line, lines))
 
-        for line in lines:
-            if "vless://" not in line:
-                continue
-
-            ip = extract_ip(line)
-            if not ip:
-                continue
-
-            for p in CDN_PREFIXES:
-                if ip.startswith(p):
-                    good.append(line)
-                    break
-
-    except Exception as e:
-        print("ERROR:", e)
+    good = [x for x in results if x]
 
 good = list(set(good))
 
