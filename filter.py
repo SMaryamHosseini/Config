@@ -129,11 +129,16 @@ for line in decoded.splitlines():
 
 for name, configs in results.items():
 
+    unique_configs = list(dict.fromkeys(configs))
+
     encoded = base64.b64encode(
-        "\n".join(configs).encode()
+        "\n".join(unique_configs).encode()
     ).decode()
 
     with open(f"{name}.txt", "w", encoding="utf-8") as f:
         f.write(encoded)
 
-    print(name, len(configs))
+    print(
+        name,
+        f"{len(configs)} -> {len(unique_configs)}"
+    )
