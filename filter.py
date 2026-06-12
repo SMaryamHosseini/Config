@@ -17,8 +17,8 @@ NETWORKS = {
         "104.",
         "172.",
         "188.",
-       "185.",
-            ],
+        "185.",
+    ],
 
     "Samantel": [
         "2.",
@@ -34,7 +34,8 @@ NETWORKS = {
         "190.",
         "199.",
     ],
-      "Mobinnet": [
+
+    "Mobinnet": [
         "2.",
         "23.",
         "34.",
@@ -50,57 +51,60 @@ NETWORKS = {
 
 def get_host(line):
     try:
+        # VLESS / TROJAN
         if line.startswith(("vless://", "trojan://")):
             return urlparse(line).hostname
 
+        # VMESS
         if line.startswith("vmess://"):
             raw = line[8:]
             raw += "=" * (-len(raw) % 4)
 
             data = json.loads(
-                base64.b64decode(raw).decode(
-                    "utf-8",
-                    errors="ignore"
-                )
+                base64.b64decode(raw).decode("utf-8", errors="ignore")
             )
 
             return data.get("add")
 
     except:
-        pass
+        return None
 
     return None
 
 
+def clean_host(host):
+    if not host:
+        return None
+    return host.split(":")[0].strip()
+
+
+# download + decode sub
 raw = urllib.request.urlopen(SOURCE, timeout=30).read().decode()
 
-decoded = base64.b64decode(raw).decode(
-    "utf-8",
-    errors="ignore"
-)
+decoded = base64.b64decode(raw).decode("utf-8", errors="ignore")
 
 results = {name: [] for name in NETWORKS}
 
 for line in decoded.splitlines():
 
     line = line.strip()
-
     if not line:
         continue
 
-    host = get_host(line)
+    host = clean_host(get_host(line))
 
     if not host:
         continue
 
     for name, prefixes in NETWORKS.items():
-
         if host.startswith(tuple(prefixes)):
             results[name].append(line)
 
 
+# write output files
 for name, configs in results.items():
 
+    # remove duplicates (exact same line)
     unique_configs = list(dict.fromkeys(configs))
 
     encoded = base64.b64encode(
@@ -110,7 +114,4 @@ for name, configs in results.items():
     with open(f"{name}.txt", "w", encoding="utf-8") as f:
         f.write(encoded)
 
-    print(
-        name,
-        f"{len(configs)} -> {len(unique_configs)}"
-    )
+    print(f"{name}: {len(configs)} -> {len(unique_configs)}")
