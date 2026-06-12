@@ -6,47 +6,25 @@ from urllib.parse import urlparse
 SOURCE = "https://raw.githubusercontent.com/barry-far/V2ray-config/main/All_Configs_base64_Sub.txt"
 
 NETWORKS = {
-    "Asia": [
-        "185.",
-        "104.",
-        "23.",
-        "34.",
-    ],
+    "Asia": ["185.", "104.", "23.", "34."],
 
-    "MCI": [
-        "104.",
-        "188.",
-    ],
+    "MCI": ["104.", "188."],
 
     "Samantel": [
-        "2.",
-        "23.",
-        "34.",
-        "92.",
-        "104.",
-        "141.",
-        "162.",
-        "167.",
-        "172.",
-        "185.",
-        "190.",
-        "199.",
+        "2.", "23.", "34.", "92.", "104.", "141.", "162.",
+        "167.", "172.", "185.", "190.", "199."
     ],
 
     "Mobinnet": [
-        "2.",
-        "23.",
-        "34.",
-        "104.",
-        "151.",
-        "167.",
-        "172.",
-        "184.",
-        "199.",
+        "2.", "23.", "34.", "104.", "151.", "167.",
+        "172.", "184.", "199."
     ],
 }
 
 
+# ----------------------------
+# Extract host from configs
+# ----------------------------
 def get_host(line):
     try:
         # VLESS / TROJAN
@@ -70,18 +48,28 @@ def get_host(line):
     return None
 
 
+# ----------------------------
+# Clean host (remove port)
+# ----------------------------
 def clean_host(host):
     if not host:
         return None
     return host.split(":")[0].strip()
 
 
-# download + decode
+# ----------------------------
+# Download + decode source
+# ----------------------------
 raw = urllib.request.urlopen(SOURCE, timeout=30).read().decode()
 
 decoded = base64.b64decode(raw).decode("utf-8", errors="ignore")
 
-results = {name: [] for name in NETWORKS}
+
+# ----------------------------
+# Store results (dedupe by host)
+# ----------------------------
+results = {name: {} for name in NETWORKS}
+
 
 for line in decoded.splitlines():
 
@@ -95,20 +83,19 @@ for line in decoded.splitlines():
         continue
 
     for name, prefixes in NETWORKS.items():
+
         if host.startswith(tuple(prefixes)):
-            results[name].append((host, line))  # store host + config
+
+            # dedupe by host (final fix)
+            results[name][host] = line
 
 
-# write outputs
+# ----------------------------
+# Write output files
+# ----------------------------
 for name, items in results.items():
 
-    # dedupe by HOST (روش 2)
-    unique = {}
-    for host, cfg in items:
-        if host not in unique:
-            unique[host] = cfg
-
-    unique_configs = list(unique.values())
+    unique_configs = list(items.values())
 
     encoded = base64.b64encode(
         "\n".join(unique_configs).encode()
@@ -117,4 +104,4 @@ for name, items in results.items():
     with open(f"{name}.txt", "w", encoding="utf-8") as f:
         f.write(encoded)
 
-    print(f"{name}: {len(items)} -> {len(unique_configs)}")
+    print(f"{name}: {len(unique_configs)}")
