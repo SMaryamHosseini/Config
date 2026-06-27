@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 SOURCE = "https://raw.githubusercontent.com/barry-far/V2ray-config/main/All_Configs_base64_Sub.txt"
 
 NETWORKS = {
-    "Asia": ["185.", "104.", "23.", "34."],
+    "Asia": ["185.", "172.", "1.1.","34.160."],
 
     "MCI": ["104.", "188."],
 
